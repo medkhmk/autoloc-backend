@@ -1,0 +1,7 @@
+package fr.ece.autoloc_api.domain;
+
+public enum ModePaiement {
+    CARTE,
+    ESPECES,
+    VIREMENT
+}
