@@ -18,13 +18,31 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        UserDetails user = User.withUsername("student")
+        // 1. Utilisateur standard (USER)
+        UserDetails student = User.withUsername("student")
                 .password(encoder.encode("student123"))
                 .roles("USER").build();
-        UserDetails admin = User.withUsername("admin")
-                .password(encoder.encode("admin123"))
+
+        // 2. Les 4 membres du groupe (ADMIN)
+        UserDetails khalifa = User.withUsername("khalifa")
+                .password(encoder.encode("khalifa123"))
                 .roles("ADMIN").build();
-        return new InMemoryUserDetailsManager(user, admin);
+
+        UserDetails kenza = User.withUsername("kenza")
+                .password(encoder.encode("kenza123"))
+                .roles("ADMIN").build();
+
+        UserDetails mithulan = User.withUsername("mithulan")
+                .password(encoder.encode("mithulan123"))
+                .roles("ADMIN").build();
+
+        UserDetails aida = User.withUsername("aida")
+                .password(encoder.encode("aida123"))
+                .roles("ADMIN").build();
+
+
+
+        return new InMemoryUserDetailsManager(student, khalifa, kenza, mithulan, aida);
     }
 
     @Bean

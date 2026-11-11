@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoLoc - Gestion de Location de Véhicules</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0f19',
+                        cardBg: '#131c2e',
+                        cardHover: '#1e293b',
+                        accentBlue: '#3b82f6',
+                        accentCyan: '#06b6d4',
+                        accentEmerald: '#10b981',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(19, 28, 46, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-blue { box-shadow: 0 0 25px -5px rgba(59, 130, 246, 0.3); }
+        .glow-emerald { box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.3); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen flex flex-col justify-between selection:bg-blue-500 selection:text-white">
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="fixed top-20 right-5 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+<header class="glass-panel sticky top-0 z-40 border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center glow-blue text-white shadow-lg">
+                <i class="fa-solid fa-car-side text-lg"></i>
+            </div>
+            <div>
+                <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-blue-400 bg-clip-text text-transparent">AutoLoc</span>
+                <span class="hidden sm:inline-block ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium">SaaS v2.4</span>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex items-center space-x-1">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                <i class="fa-solid fa-chart-pie mr-2"></i>Tableau de Bord
+            </button>
+            <button onclick="switchTab('fleet')" id="nav-fleet" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                <i class="fa-solid fa-car mr-2"></i>Gestion Flotte
+            </button>
+            <button onclick="switchTab('team')" id="nav-team" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-800/50">
+                <i class="fa-solid fa-users mr-2"></i>Équipe & Projet
+            </button>
+        </nav>
+
+        <div class="flex items-center space-x-3">
+            <div class="hidden lg:flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-xs font-semibold text-emerald-400">Opérationnel</span>
+            </div>
+            <div class="w-9 h-9 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center font-bold text-sm text-white shadow">MK</div>
+        </div>
+    </div>
+</header>
+
+<main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="tab-dashboard" class="space-y-8 animate-fadeIn">
+        <div class="glass-panel rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute right-40 -top-10 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-3 border border-blue-500/20">
+                        <i class="fa-solid fa-graduation-cap"></i> ECE - Architecture Des Systèmes D'information Et Performance
+                    </div>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Plateforme de Pilotage <span class="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">AutoLoc</span></h1>
+                    <p class="text-slate-400 mt-2 max-w-2xl text-sm sm:text-base">Suivi en temps réel de la flotte automobile, analyse des performances de location et pilotage stratégique par le groupe d'ingénierie.</p>
+                </div>
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <button onclick="switchTab('fleet')" class="flex-1 md:flex-initial px-5 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 hover:opacity-95 transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-car"></i><span>Voir les véhicules</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="glass-panel p-6 rounded-2xl hover:border-blue-500/40 transition-all group">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Chiffre d'Affaires</span>
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fa-solid fa-euro-sign"></i></div>
+                </div>
+                <div class="mt-4 flex items-baseline">
+                    <span class="text-3xl font-extrabold text-white">128,450 €</span>
+                    <span class="ml-2 text-xs font-semibold text-emerald-400 flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+14.2%</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Comparé au mois dernier</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl hover:border-cyan-500/40 transition-all group">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Taux d'Occupation</span>
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fa-solid fa-percent"></i></div>
+                </div>
+                <div class="mt-4 flex items-baseline">
+                    <span class="text-3xl font-extrabold text-white">84.6%</span>
+                    <span class="ml-2 text-xs font-semibold text-emerald-400 flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+5.1%</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Flotte active sur route</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl hover:border-purple-500/40 transition-all group">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Locations Actives</span>
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fa-solid fa-key"></i></div>
+                </div>
+                <div class="mt-4 flex items-baseline">
+                    <span class="text-3xl font-extrabold text-white" id="activeBookingsCount">342</span>
+                    <span class="ml-2 text-xs font-semibold text-emerald-400 flex items-center"><i class="fa-solid fa-arrow-trend-up mr-1"></i>+28 ce mois</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Contrats en cours</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl hover:border-emerald-500/40 transition-all group">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Satisfaction Client</span>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform"><i class="fa-solid fa-star"></i></div>
+                </div>
+                <div class="mt-4 flex items-baseline">
+                    <span class="text-3xl font-extrabold text-white">4.9 / 5</span>
+                    <span class="ml-2 text-xs font-semibold text-emerald-400 flex items-center"><i class="fa-solid fa-shield-check mr-1"></i>Certifié</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Basé sur 1,240 avis</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="glass-panel p-6 rounded-2xl lg:col-span-2 flex flex-col justify-between">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 pb-4 border-b border-slate-800">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Évolution du Chiffre d'Affaires</h2>
+                        <p class="text-xs text-slate-400">Performances mensuelles de location (en k€)</p>
+                    </div>
+                    <div class="mt-2 sm:mt-0 flex space-x-2">
+                        <button onclick="updateChartPeriod('monthly')" id="btn-monthly" class="px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition">Mensuel</button>
+                        <button onclick="updateChartPeriod('weekly')" id="btn-weekly" class="px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Hebdo</button>
+                    </div>
+                </div>
+                <div class="relative h-72 w-full"><canvas id="revenueChart"></canvas></div>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between">
+                <div class="mb-4 pb-4 border-b border-slate-800">
+                    <h2 class="text-lg font-bold text-white">Répartition du Parc</h2>
+                    <p class="text-xs text-slate-400">Véhicules par catégorie</p>
+                </div>
+                <div class="relative h-60 w-full flex items-center justify-center"><canvas id="categoryChart"></canvas></div>
+                <div class="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-800 text-xs">
+                    <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-slate-300">Berline (35%)</span></div>
+                    <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-cyan-400"></span><span class="text-slate-300">SUV (30%)</span></div>
+                    <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-purple-500"></span><span class="text-slate-300">Citadine (20%)</span></div>
+                    <div class="flex items-center space-x-2"><span class="w-3 h-3 rounded-full bg-emerald-400"></span><span class="text-slate-300">Utilitaire (15%)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions Table -->
+        <div class="glass-panel rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Dernières Locations Enregistrées</h2>
+                    <p class="text-xs text-slate-400">Suivi des derniers contrats validés sur la plateforme</p>
+                </div>
+                <button onclick="switchTab('fleet')" class="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center">
+                    Voir tout <i class="fa-solid fa-chevron-right ml-1 text-[10px]"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                    <tr class="border-b border-slate-800 text-slate-400 text-xs uppercase tracking-wider">
+                        <th class="pb-3 font-semibold">Client</th>
+                        <th class="pb-3 font-semibold">Véhicule</th>
+                        <th class="pb-3 font-semibold">Catégorie</th>
+                        <th class="pb-3 font-semibold">Statut</th>
+                        <th class="pb-3 font-semibold text-right">Montant</th>
+                    </tr>
+                    </thead>
+                    <tbody id="recentBookingsTable" class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 font-bold flex items-center justify-center text-xs">JD</div>
+                            <div>
+                                <div class="font-semibold text-white">Jean Dupont</div>
+                                <div class="text-xs text-slate-500">jean.d@gmail.com</div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 font-medium text-white">Audi A4 S-Line</td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-400 text-xs font-semibold">Berline</span></td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">En cours</span></td>
+                        <td class="py-3.5 text-right font-bold text-white">450 €</td>
+                    </tr>
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 font-bold flex items-center justify-center text-xs">SM</div>
+                            <div>
+                                <div class="font-semibold text-white">Sophie Martin</div>
+                                <div class="text-xs text-slate-500">sophie.m@yahoo.fr</div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 font-medium text-white">Volvo XC90</td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-md bg-cyan-500/10 text-cyan-400 text-xs font-semibold">SUV</span></td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">En cours</span></td>
+                        <td class="py-3.5 text-right font-bold text-white">820 €</td>
+                    </tr>
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="py-3.5 flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-bold flex items-center justify-center text-xs">AK</div>
+                            <div>
+                                <div class="font-semibold text-white">Alexandre Keller</div>
+                                <div class="text-xs text-slate-500">alex.k@outlook.com</div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 font-medium text-white">Renault Clio V</td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-400 text-xs font-semibold">Citadine</span></td>
+                        <td class="py-3.5"><span class="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-semibold">Réservé</span></td>
+                        <td class="py-3.5 text-right font-bold text-white">180 €</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: FLEET (30 VOITURES) -->
+    <div id="tab-fleet" class="space-y-8 hidden animate-fadeIn">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-800">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-white">Catalogue & Gestion des Véhicules</h1>
+                <p class="text-slate-400 text-sm">Sélectionnez une catégorie ou filtrez les véhicules disponibles du parc AutoLoc.</p>
+            </div>
+            <div class="flex items-center space-x-2 w-full md:w-auto">
+                <div class="relative flex-grow md:w-64">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+                    <input type="text" id="carSearch" onkeyup="filterCars()" placeholder="Rechercher un modèle..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            <button onclick="filterCategory('all')" id="cat-all" class="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white transition">Tous</button>
+            <button onclick="filterCategory('citadine')" id="cat-citadine" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Citadine</button>
+            <button onclick="filterCategory('berline')" id="cat-berline" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Berline</button>
+            <button onclick="filterCategory('suv')" id="cat-suv" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white transition">SUV</button>
+            <button onclick="filterCategory('utilitaire')" id="cat-utilitaire" class="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white transition">Utilitaire</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="carGrid">
+
+            <!-- ===== CITADINES ===== -->
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-1">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/clio.jpg" alt="Renault Clio" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Clio'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Renault Clio</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">50 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-1', 'Renault Clio', '50 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-2">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/citroen.jpg" alt="Citroën C3" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=C3'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Citroën C3</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">45 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-2', 'Citroën C3', '45 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-3">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/polo.jpg" alt="Volkswagen Polo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Polo'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Volkswagen Polo</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">60 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-3', 'Volkswagen Polo', '60 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-4">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/MiniM.jpg" alt="Mini Cooper" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Cooper'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Mini Cooper</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Essence • 4 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">75 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-4', 'Mini Cooper', '75 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-5">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/yaris.jpg" alt="Toyota Yaris" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Yaris'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Toyota Yaris</h3><p class="text-xs text-slate-400 mt-0.5">Hybride • Automatique • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">55 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-5', 'Toyota Yaris', '55 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-purple-500/50 transition-all group car-card" data-category="citadine" id="car-card-6">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/peugeot208.jpg" alt="Peugeot 208" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=208'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-bold">Citadine</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">Peugeot 208</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">55 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-6', 'Peugeot 208', '55 €', 'Citadine')" class="book-btn px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition shadow-lg shadow-purple-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== BERLINES ===== -->
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-7">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/mercedes.jpg" alt="Mercedes Classe C" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Mercedes'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Mercedes Classe C</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">150 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-7', 'Mercedes Classe C', '150 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-8">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/bmws4.jpg" alt="BMW Série 4" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=BMW'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">BMW Série 4</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 4 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">180 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-8', 'BMW Série 4', '180 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-9">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/peugeot508.jpg" alt="Peugeot 508" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=508'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Peugeot 508</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">120 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-9', 'Peugeot 508', '120 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-10">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/maserati.jpg" alt="Maserati Ghibli" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Maserati'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Maserati Ghibli</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">400 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-10', 'Maserati Ghibli', '400 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-11">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/rolls.jpg" alt="Rolls-Royce Ghost" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Rolls'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Rolls-Royce Ghost</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">1200 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-11', 'Rolls-Royce Ghost', '1200 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-12">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/ferrari.jpg" alt="Ferrari Roma" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Ferrari'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Ferrari Roma</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 2 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">2000 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-12', 'Ferrari Roma', '2000 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-13">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/audia4.jpg" alt="Audi A4" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Audi A4'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Audi A4</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">160 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-13', 'Audi A4', '160 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group car-card" data-category="berline" id="car-card-14">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/talisman.jpg" alt="Renault Talisman" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Talisman'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-blue-600 text-white text-xs font-bold">Berline</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">Renault Talisman</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">110 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-14', 'Renault Talisman', '110 €', 'Berline')" class="book-btn px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== SUV ===== -->
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-15">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/peugeot3008.jpg" alt="Peugeot 3008" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=3008'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Peugeot 3008</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">90 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-15', 'Peugeot 3008', '90 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-16">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/rav4.jpg" alt="Toyota RAV4" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=RAV4'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Toyota RAV4</h3><p class="text-xs text-slate-400 mt-0.5">Hybride • Automatique • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">110 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-16', 'Toyota RAV4', '110 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-17">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/gclass.jpg" alt="Mercedes G-Class" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=G-Class'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Mercedes G-Class</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">300 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-17', 'Mercedes G-Class', '300 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-18">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/Urus.jpg" alt="Lamborghini Urus" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Urus'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Lamborghini Urus</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">1500 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-18', 'Lamborghini Urus', '1500 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-19">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/austral.jpg" alt="Renault Austral" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Austral'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Renault Austral</h3><p class="text-xs text-slate-400 mt-0.5">Hybride • Automatique • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">100 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-19', 'Renault Austral', '100 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-20">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/bmwx5.jpg" alt="BMW X5" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=X5'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">BMW X5</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">200 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-20', 'BMW X5', '200 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-cyan-500/50 transition-all group car-card" data-category="suv" id="car-card-21">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/audiq5.jpg" alt="Audi Q5" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Q5'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-cyan-600 text-white text-xs font-bold">SUV</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-cyan-400 transition-colors">Audi Q5</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Diesel • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">190 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-21', 'Audi Q5', '190 €', 'SUV')" class="book-btn px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition shadow-lg shadow-cyan-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== UTILITAIRES ===== -->
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-22">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/kangoo.jpg" alt="Renault Kangoo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Kangoo'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Renault Kangoo</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">70 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-22', 'Renault Kangoo', '70 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-23">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/partner.jpg" alt="Peugeot Partner" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Partner'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Peugeot Partner</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">75 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-23', 'Peugeot Partner', '75 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-24">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/berlingo.jpeg" alt="Citroën Berlingo" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Berlingo'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Citroën Berlingo</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">80 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-24', 'Citroën Berlingo', '80 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-25">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/transit.jpeg" alt="Ford Transit" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Transit'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Ford Transit</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">95 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-25', 'Ford Transit', '95 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-26">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/trafic.jpg" alt="Renault Trafic" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Trafic'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Renault Trafic</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">100 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-26', 'Renault Trafic', '100 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-27">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/mercedesV.jpg" alt="Mercedes Vito" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Vito'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Mercedes Vito</h3><p class="text-xs text-slate-400 mt-0.5">Manuelle • Diesel • Grand Volume</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">110 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-27', 'Mercedes Vito', '110 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl overflow-hidden hover:border-emerald-500/50 transition-all group car-card" data-category="utilitaire" id="car-card-28">
+                <div class="h-48 bg-slate-900 relative overflow-hidden flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent z-10"></div>
+                    <img src="/porsche.jpg" alt="Porsche Macan" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/600x400/1e293b/ffffff?text=Macan'">
+                    <span class="status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold backdrop-blur-md">Disponible</span>
+                    <span class="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-bold">Utilitaire</span>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div><h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors">Porsche Macan</h3><p class="text-xs text-slate-400 mt-0.5">Automatique • Essence • 5 places</p></div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+                        <div><span class="text-2xl font-extrabold text-white">130 €</span><span class="text-xs text-slate-400">/ jour</span></div>
+                        <button onclick="openBookingModal('car-card-28', 'Porsche Macan', '130 €', 'Utilitaire')" class="book-btn px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-lg shadow-emerald-500/20">Réserver</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TAB 3: TEAM -->
+    <div id="tab-team" class="space-y-8 hidden animate-fadeIn">
+        <div class="glass-panel rounded-2xl p-8 text-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-cyan-500/10 pointer-events-none"></div>
+            <div class="relative z-10 max-w-2xl mx-auto space-y-4">
+                <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold tracking-wide border border-blue-500/20">
+                    <i class="fa-solid fa-university"></i> ECE - Architecture Des Systèmes D'information Et Performance
+                </div>
+                <h1 class="text-3xl font-extrabold text-white">Projet de Conception & Réalisation</h1>
+                <p class="text-slate-400 text-sm">Application SaaS de gestion de location de véhicules développée dans le cadre des travaux d'architecture des SI et de performance applicative.</p>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-bold text-white mb-6 flex items-center"><i class="fa-solid fa-user-group text-blue-400 mr-2"></i>Membres du Groupe de Projet</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-panel p-6 rounded-2xl text-center group hover:border-blue-500/50 transition-all">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-400 text-white font-extrabold text-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform">MK</div>
+                    <h3 class="text-lg font-bold text-white">Khalifa Mohamed Khalifa</h3>
+                    <p class="text-xs text-blue-400 font-semibold mt-1">Lead Architect & Backend</p>
+                    <p class="text-xs text-slate-400 mt-3">Conception des flux de données et architecture globale du système.</p>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl text-center group hover:border-purple-500/50 transition-all">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 text-white font-extrabold text-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform">KB</div>
+                    <h3 class="text-lg font-bold text-white">Kenza Bassis</h3>
+                    <p class="text-xs text-purple-400 font-semibold mt-1">UX/UI & Front-End</p>
+                    <p class="text-xs text-slate-400 mt-3">Design d'interface utilisateur et ergonomie SaaS haut de gamme.</p>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl text-center group hover:border-cyan-500/50 transition-all">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 text-white font-extrabold text-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform">MG</div>
+                    <h3 class="text-lg font-bold text-white">Mithulan Gunendran</h3>
+                    <p class="text-xs text-cyan-400 font-semibold mt-1">Performance & Analytics</p>
+                    <p class="text-xs text-slate-400 mt-3">Intégration des graphiques interactifs et optimisation des requêtes.</p>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl text-center group hover:border-emerald-500/50 transition-all">
+                    <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-white font-extrabold text-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-105 transition-transform">AN</div>
+                    <h3 class="text-lg font-bold text-white">Aïda Martine Ndiaye</h3>
+                    <p class="text-xs text-emerald-400 font-semibold mt-1">Qualité & Sécurité</p>
+                    <p class="text-xs text-slate-400 mt-3">Tests d'intégration, validation fonctionnelle et sécurité applicative.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="glass-panel border-t border-slate-800/80 mt-12 py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+        <div>© 2026 AutoLoc. Tous droits réservés. ECE - Architecture Des Systèmes D'information Et Performance.</div>
+    </div>
+</footer>
+
+<!-- MODAL DE RÉSERVATION ENRICHIE -->
+<div id="bookingModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="glass-panel p-6 rounded-2xl max-w-md w-full mx-4 border border-slate-700 shadow-2xl space-y-4">
+        <div class="flex items-center space-x-3 text-blue-400">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-lg"><i class="fa-solid fa-car-side"></i></div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Réserver un véhicule</h3>
+                <p class="text-xs text-slate-400" id="modalCarSubtitle">Véhicule sélectionné</p>
+            </div>
+        </div>
+
+        <form id="bookingForm" onsubmit="confirmBooking(event)" class="space-y-4">
+            <input type="hidden" id="modalCardId">
+            <input type="hidden" id="modalCarName">
+            <input type="hidden" id="modalCarPrice">
+            <input type="hidden" id="modalCarCategory">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Nom complet du client</label>
+                <input type="text" id="clientNameInput" required placeholder="Ex: Lucas Bernard" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Adresse Email</label>
+                <input type="email" id="clientEmailInput" required placeholder="Ex: lucas.b@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-2">
+                <button type="button" onclick="closeBookingModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition">Annuler</button>
+                <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-lg shadow-blue-500/20">Valider la Réservation</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let activeBookingsCount = 342;
+
+    function switchTab(tabId) {
+        ['dashboard', 'fleet', 'team'].forEach(t => {
+            document.getElementById('tab-' + t).classList.add('hidden');
+            const navBtn = document.getElementById('nav-' + t);
+            if (navBtn) navBtn.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-100 hover:bg-slate-800/50";
+        });
+        document.getElementById('tab-' + tabId).classList.remove('hidden');
+        const activeNav = document.getElementById('nav-' + tabId);
+        if (activeNav) activeNav.className = "px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-blue-600/20 text-blue-400 border border-blue-500/30";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openBookingModal(cardId, carName, price, category) {
+        document.getElementById('modalCardId').value = cardId;
+        document.getElementById('modalCarName').value = carName;
+        document.getElementById('modalCarPrice').value = price;
+        document.getElementById('modalCarCategory').value = category;
+        document.getElementById('modalCarSubtitle').innerText = `${carName} • ${price}/jour`;
+        document.getElementById('bookingModal').classList.remove('hidden');
+    }
+
+    function closeBookingModal() {
+        document.getElementById('bookingModal').classList.add('hidden');
+        document.getElementById('bookingForm').reset();
+    }
+
+    function confirmBooking(event) {
+        event.preventDefault();
+
+        const cardId = document.getElementById('modalCardId').value;
+        const carName = document.getElementById('modalCarName').value;
+        const price = document.getElementById('modalCarPrice').value;
+        const category = document.getElementById('modalCarCategory').value;
+        const clientName = document.getElementById('clientNameInput').value;
+        const clientEmail = document.getElementById('clientEmailInput').value;
+
+        // 1. Mettre à jour la carte dans la flotte
+        const card = document.getElementById(cardId);
+        if (card) {
+            const badge = card.querySelector('.status-badge');
+            if (badge) {
+                badge.className = "status-badge absolute top-3 right-3 z-20 px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold backdrop-blur-md";
+                badge.innerText = "Loué / Indisponible";
+            }
+            const btn = card.querySelector('.book-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.className = "book-btn px-4 py-2 rounded-xl bg-slate-800 text-slate-500 font-semibold text-xs cursor-not-allowed border border-slate-700/50";
+                btn.innerText = "Indisponible";
+            }
+        }
+
+        // 2. Générer les initiales du client
+        const initials = clientName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) || 'CL';
+
+        // 3. Ajouter la nouvelle ligne au tableau de bord
+        const tableBody = document.getElementById('recentBookingsTable');
+        const newRow = document.createElement('tr');
+        newRow.className = "hover:bg-slate-800/30 transition bg-blue-500/5 animate-pulse";
+
+        let catColorClass = "bg-blue-500/10 text-blue-400";
+        if(category === 'SUV') catColorClass = "bg-cyan-500/10 text-cyan-400";
+        if(category === 'Citadine') catColorClass = "bg-purple-500/10 text-purple-400";
+        if(category === 'Utilitaire') catColorClass = "bg-emerald-500/10 text-emerald-400";
+
+        newRow.innerHTML = `
+            <td class="py-3.5 flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-xs">${initials}</div>
+                <div>
+                    <div class="font-semibold text-white">${clientName}</div>
+                    <div class="text-xs text-slate-500">${clientEmail}</div>
+                </div>
+            </td>
+            <td class="py-3.5 font-medium text-white">${carName}</td>
+            <td class="py-3.5"><span class="px-2.5 py-1 rounded-md ${catColorClass} text-xs font-semibold">${category}</span></td>
+            <td class="py-3.5"><span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold">En cours</span></td>
+            <td class="py-3.5 text-right font-bold text-white">${price}</td>
+        `;
+
+        tableBody.insertBefore(newRow, tableBody.firstChild);
+
+        // Retirer l'effet d'animation après 2s
+        setTimeout(() => newRow.classList.remove('animate-pulse', 'bg-blue-500/5'), 2000);
+
+        // 4. Mettre à jour le compteur des locations actives
+        activeBookingsCount++;
+        document.getElementById('activeBookingsCount').innerText = activeBookingsCount;
+
+        // 5. Afficher la notification Toast
+        showToast(`Réservation validée pour ${clientName} (${carName})`);
+
+        closeBookingModal();
+    }
+
+    function showToast(message) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = "glass-panel border border-emerald-500/30 text-emerald-400 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-xs font-semibold animate-bounce pointer-events-auto";
+        toast.innerHTML = `<i class="fa-solid fa-circle-check text-sm"></i><span>${message}</span>`;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 4000);
+    }
+
+    function filterCategory(cat) {
+        ['all', 'citadine', 'berline', 'suv', 'utilitaire'].forEach(c => {
+            const btn = document.getElementById('cat-' + c);
+            if (btn) btn.className = c === cat ? "px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white transition" : "px-4 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+        });
+        document.querySelectorAll('.car-card').forEach(card => {
+            card.style.display = (cat === 'all' || card.getAttribute('data-category') === cat) ? 'block' : 'none';
+        });
+    }
+
+    function filterCars() {
+        const query = document.getElementById('carSearch').value.toLowerCase();
+        document.querySelectorAll('.car-card').forEach(card => {
+            const title = card.querySelector('h3').innerText.toLowerCase();
+            card.style.display = title.includes(query) ? 'block' : 'none';
+        });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        new Chart(document.getElementById('revenueChart').getContext('2d'), {
+            type: 'line',
+            data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'], datasets: [{ label: 'Chiffre d\'Affaires (€)', data: [65000, 72000, 85000, 91000, 105000, 118000, 128450, 122000, 115000, 120000, 132000, 145000], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#3b82f6', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } } }, y: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } } } } }
+        });
+
+        new Chart(document.getElementById('categoryChart').getContext('2d'), {
+            type: 'doughnut',
+            data: { labels: ['Berline', 'SUV', 'Citadine', 'Utilitaire'], datasets: [{ data: [35, 30, 20, 15], backgroundColor: ['#3b82f6', '#06b6d4', '#a855f7', '#10b981'], borderWidth: 0, hoverOffset: 4 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%' }
+        });
+    });
+
+    function updateChartPeriod(period) {
+        document.getElementById('btn-monthly').className = period === 'monthly' ? "px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition" : "px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+        document.getElementById('btn-weekly').className = period === 'weekly' ? "px-3 py-1 rounded-lg text-xs font-semibold bg-blue-600 text-white transition" : "px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white transition";
+    }
+</script>
+</body>
+</html>

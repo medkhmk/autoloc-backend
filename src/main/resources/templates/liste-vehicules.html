@@ -2,27 +2,213 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>AutoLoc - Louer une voiture</title>
+    <title>AutoLoc - Véhicules disponibles</title>
     <style>
-        body { font-family: Arial; background: #2c3e50; color: white; padding: 20px; }
-        .card { background: #34495e; padding: 15px; margin: 10px; border-radius: 8px; }
-        .btn { background: #1abc9c; color: white; padding: 10px; border: none; cursor: pointer; }
-        input { padding: 8px; margin: 5px; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: white;
+            padding: 20px;
+            margin: 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+        }
+        h1 {
+            color: #3b82f6;
+            margin: 0;
+        }
+        .btn-back {
+            background-color: #334155;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-back:hover {
+            background-color: #475569;
+        }
+        .success-message {
+            background-color: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: #1e293b;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background-color: #0f172a;
+        }
+        .card-content {
+            padding: 20px;
+        }
+        .card h3 {
+            margin: 0 0 15px 0;
+            color: #3b82f6;
+            font-size: 1.3em;
+        }
+        .card p {
+            margin: 8px 0;
+            color: #cbd5e1;
+            font-size: 0.95em;
+        }
+        .badge-cat {
+            display: inline-block;
+            background-color: #334155;
+            color: #94a3b8;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-bottom: 10px;
+        }
+        .price {
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-top: 10px !important;
+        }
+        .form-location {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .form-location input[type="email"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            font-size: 0.9em;
+        }
+        .btn {
+            width: 100%;
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #2563eb;
+        }
+        .empty-message {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 1.2em;
+            margin-top: 50px;
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
-<h1>Véhicules disponibles à la location</h1>
-<div th:if="${param.success}" style="color: lightgreen;">Réservation effectuée avec succès !</div>
 
-<div th:each="v : ${vehicules}" class="card">
-    <h3 th:text="${v.marque} + ' ' + ${v.modele}"></h3>
-    <p>Immatriculation : <span th:text="${v.immatriculation}"></span></p>
-    <p>Prix : <span th:text="${v.tarifJournalier}"></span> € / jour</p>
-
-    <form th:action="@{/client/louer/{id}(id=${v.idVehicle})}" method="post">
-        <input type="email" name="emailClient" placeholder="Votre email" required>
-        <button type="submit" class="btn">Louer ce véhicule</button>
-    </form>
+<div class="header">
+    <h1>🚗 Véhicules disponibles</h1>
+    <a href="/client/categories" class="btn-back">← Retour aux catégories</a>
 </div>
+
+<!-- Message de succès après location -->
+<div th:if="${param.success}" class="success-message">
+    ✅ Réservation effectuée avec succès ! Merci de votre confiance.
+</div>
+
+<!-- Grille des véhicules -->
+<div class="grid">
+    <div class="card" th:each="v : ${vehicules}">
+
+        <!-- Mapping des images selon le modèle (basé sur TES fichiers) -->
+        <img th:src="@{
+                ${v.modele == 'Clio' ? '/clio.jpg' :
+                  v.modele == 'C3' ? '/citroen.jpg' :
+                  v.modele == 'Polo' ? '/polo.jpg' :
+                  v.modele == 'Cooper' ? '/MiniM.jpg' :
+                  v.modele == 'Yaris' ? '/yaris.jpg' :
+                  v.modele == '208' ? '/peugeot208.jpg' :
+                  v.modele == 'Twingo' ? '/clio.jpg' :
+                  v.modele == '500' ? '/citroen.jpg' :
+                  v.modele == 'Classe C' ? '/mercedes.jpg' :
+                  v.modele == 'Série 4' ? '/bmws4.jpg' :
+                  v.modele == '508' ? '/peugeot508.jpg' :
+                  v.modele == 'Ghibli' ? '/maserati.jpg' :
+                  v.modele == 'Ghost' ? '/rolls.jpg' :
+                  v.modele == 'Roma' ? '/ferrari.jpg' :
+                  v.modele == 'A4' ? '/audia4.jpg' :
+                  v.modele == 'Talisman' ? '/talisman.jpg' :
+                  v.modele == '3008' ? '/peugeot3008.jpg' :
+                  v.modele == 'RAV4' ? '/rav4.jpg' :
+                  v.modele == 'G-Class' ? '/gclass.jpg' :
+                  v.modele == 'Urus' ? '/Urus.jpg' :
+                  v.modele == 'Austral' ? '/austral.jpg' :
+                  v.modele == 'X5' ? '/bmwx5.jpg' :
+                  v.modele == 'Q5' ? '/audiq5.jpg' :
+                  v.modele == 'Kangoo' ? '/kangoo.jpg' :
+                  v.modele == 'Partner' ? '/partner.jpg' :
+                  v.modele == 'Berlingo' ? '/berlingo.jpeg' :
+                  v.modele == 'Transit' ? '/transit.jpeg' :
+                  v.modele == 'Trafic' ? '/trafic.jpg' :
+                  v.modele == 'Vito' ? '/mercedesV.jpg' :
+                  v.modele == 'Macan' ? '/porsche.jpg' : '/default.jpg'}
+            }"
+             alt="Voiture"
+             onerror="this.src='https://via.placeholder.com/400x200?text=Photo+non+disponible'">
+
+        <div class="card-content">
+            <span class="badge-cat" th:text="${v.categorie}">CATEGORIE</span>
+            <h3 th:text="${v.marque} + ' ' + ${v.modele}">Marque Modèle</h3>
+
+            <p>🔑 Immatriculation : <strong><span th:text="${v.immatriculation}"></span></strong></p>
+            <p>📊 Statut : <span th:text="${v.statut}"></span></p>
+
+            <p class="price" th:text="${v.tarifJournalier} + ' € / jour'">0.00 € / jour</p>
+
+            <!-- Formulaire de location -->
+            <form class="form-location" th:action="@{/client/louer/{id}(id=${v.idVehicle})}" method="post">
+                <input type="email" name="emailClient" placeholder="Votre adresse email" required>
+                <button type="submit" class="btn">🔑 Louer ce véhicule</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Message si aucun véhicule trouvé -->
+    <div class="empty-message" th:if="${vehicules == null || vehicules.isEmpty()}">
+        Aucun véhicule disponible dans cette catégorie pour le moment.
+    </div>
+</div>
+
 </body>
 </html>
