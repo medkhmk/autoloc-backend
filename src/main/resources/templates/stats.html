@@ -5,42 +5,76 @@
     <title>AutoLoc - Performances</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial; background: #2c3e50; color: white; padding: 20px; }
-        h1 { text-align: center; color: #1abc9c; }
-        .container { max-width: 800px; margin: auto; background: #34495e; padding: 20px; border-radius: 10px; }
-        canvas { margin-top: 20px; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0f172a;
+            color: white;
+            padding: 40px;
+            margin: 0;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 { color: white; margin: 0; font-size: 2em; }
         .btn-back {
-            display: block;
-            width: fit-content;
-            margin: 30px auto 0;
-            padding: 12px 24px;
-            background-color: #e74c3c;
+            background-color: #334155;
             color: white;
             text-decoration: none;
+            padding: 10px 20px;
             border-radius: 8px;
-            font-weight: bold;
-            transition: background-color 0.3s;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .btn-back:hover {
-            background-color: #c0392b;
+        .btn-back:hover { background-color: #475569; }
+
+        .chart-container {
+            background: rgba(30, 41, 59, 0.7);
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h3 { color: #cbd5e1; margin-top: 0; font-size: 1.2em; }
+
+        /* Style pour le tag "LIVE" */
+        .live-tag {
+            background-color: #10b981;
+            color: white;
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 10px;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
-<h1>📊 Performances d'AutoLoc</h1>
-<div class="container">
-    <h3>Nombre de requêtes HTTP (temps réel)</h3>
-    <canvas id="requestsChart"></canvas>
-
-    <h3>Temps de réponse moyen (ms)</h3>
-    <canvas id="responseTimeChart"></canvas>
-
-    <!-- LE BOUTON RETOUR -->
+<div class="header">
+    <h1>📊 Performances d'AutoLoc</h1>
     <a href="/" class="btn-back">← Retour à l'accueil</a>
 </div>
 
+<div class="chart-container">
+    <h3>Nombre de requêtes HTTP <span class="live-tag">● LIVE</span></h3>
+    <canvas id="requestsChart"></canvas>
+</div>
+
+<div class="chart-container">
+    <h3>Temps de réponse moyen (ms)</h3>
+    <canvas id="responseTimeChart"></canvas>
+</div>
+
 <script>
+    // Graphique 1 : Ligne avec dégradé
     const ctx1 = document.getElementById('requestsChart').getContext('2d');
+    const gradient1 = ctx1.createLinearGradient(0, 0, 0, 400);
+    gradient1.addColorStop(0, 'rgba(16, 185, 129, 0.5)');
+    gradient1.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
     new Chart(ctx1, {
         type: 'line',
         data: {
@@ -48,15 +82,25 @@
             datasets: [{
                 label: 'Requêtes / seconde',
                 data: [12, 19, 15, 22, 18, 25],
-                borderColor: '#1abc9c',
-                backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                borderColor: '#10b981',
+                backgroundColor: gradient1,
+                borderWidth: 3,
                 fill: true,
-                tension: 0.4
+                tension: 0.4,
+                pointBackgroundColor: '#10b981'
             }]
         },
-        options: { responsive: true }
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#cbd5e1' } } },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
     });
 
+    // Graphique 2 : Barres colorées
     const ctx2 = document.getElementById('responseTimeChart').getContext('2d');
     new Chart(ctx2, {
         type: 'bar',
@@ -65,10 +109,18 @@
             datasets: [{
                 label: 'Temps moyen (ms)',
                 data: [5, 12, 8],
-                backgroundColor: ['#e74c3c', '#f1c40f', '#3498db']
+                backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6'],
+                borderRadius: 8
             }]
         },
-        options: { responsive: true }
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#cbd5e1' } } },
+            scales: {
+                x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+            }
+        }
     });
 </script>
 </body>

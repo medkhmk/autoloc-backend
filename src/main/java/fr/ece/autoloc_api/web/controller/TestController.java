@@ -17,8 +17,8 @@ public class TestController {
                 <title>AutoLoc - Accueil</title>
                 <style>
                     body {
-                        font-family: Arial, sans-serif;
-                        background-color: darkslategray;
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        background-color: #0f172a; /* Bleu très foncé */
                         color: white;
                         display: flex;
                         justify-content: center;
@@ -27,66 +27,71 @@ public class TestController {
                         margin: 0;
                     }
                     .card {
-                        background-color: slategray;
-                        padding: 40px;
-                        border-radius: 15px;
+                        background: rgba(30, 41, 59, 0.7);
+                        backdrop-filter: blur(10px);
+                        padding: 50px;
+                        border-radius: 20px;
                         text-align: center;
-                        max-width: 600px;
-                        box-shadow: 0px 10px 20px rgba(0,0,0,0.5);
+                        max-width: 700px;
+                        box-shadow: 0px 15px 35px rgba(0,0,0,0.5);
+                        border: 1px solid rgba(255,255,255,0.1);
                     }
                     h1 {
-                        color: black;
+                        color: #3b82f6; /* Bleu vif */
                         font-size: 2.5em;
                         margin-bottom: 10px;
+                        font-weight: bold;
                     }
                     h2 {
-                        color: whitesmoke;
-                        font-size: 1.2em;
+                        color: #94a3b8;
+                        font-size: 1.1em;
                         font-weight: normal;
                         margin-bottom: 30px;
                     }
-                    .team {
-                        list-style: none;
-                        padding: 0;
-                        font-size: 1.2em;
-                        line-height: 2;
+                    .team-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 15px;
+                        margin-bottom: 30px;
                     }
-                    .team li {
-                        background-color: lightseagreen;
-                        margin: 10px 0;
-                        padding: 10px;
-                        border-radius: 8px;
-                        color: white;
-                    }
-                    .footer {
-                        margin-top: 30px;
-                        font-size: 0.9em;
-                        color: silver;
+                    .team-card {
+                        background-color: #334155;
+                        padding: 15px;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.05);
+                        color: #e2e8f0;
+                        font-weight: 500;
                     }
                     .badge {
                         display: inline-block;
-                        background-color: crimson;
-                        color: black;
-                        padding: 8px 15px;
+                        background-color: #10b981;
+                        color: white;
+                        padding: 8px 16px;
                         border-radius: 20px;
                         font-size: 0.9em;
-                        margin-top: 20px;
+                        margin-bottom: 20px;
+                        box-shadow: 0px 0px 15px rgba(16, 185, 129, 0.5); /* Effet néon */
                     }
-                    /* Style du bouton */
                     .btn-stats {
-                        display: inline-block;
-                        margin-top: 20px;
-                        padding: 12px 24px;
-                        background-color: gold;
-                        color: black;
+                        display: block;
+                        width: 100%;
+                        padding: 15px;
+                        background-color: #3b82f6;
+                        color: white;
                         text-decoration: none;
-                        border-radius: 8px;
+                        border-radius: 12px;
                         font-weight: bold;
                         font-size: 1.1em;
                         transition: background-color 0.3s;
+                        box-sizing: border-box;
                     }
                     .btn-stats:hover {
-                        background-color: orange;
+                        background-color: #2563eb;
+                    }
+                    .footer {
+                        margin-top: 30px;
+                        font-size: 0.8em;
+                        color: #64748b;
                     }
                 </style>
             </head>
@@ -94,20 +99,22 @@ public class TestController {
                 <div class="card">
                     <h1>🏎️ AutoLoc</h1>
                     <h2>Application de gestion de location de véhicules</h2>
-                    <p>Projet réalisé par le groupe :</p>
-                    <ul class="team">
-                        <li>KHALIFA Mohamed Khalifa</li>
-                        <li>BASSIS Kenza</li>
-                        <li>GUNENDRAN Mithulan</li>
-                        <li>NDIAYE Aïda Martine</li>
-                    </ul>
+                    
+                    <p style="color: #94a3b8; font-weight: bold; margin-bottom: 15px;">PROJET RÉALISÉ PAR LE GROUPE</p>
+                    
+                    <div class="team-grid">
+                        <div class="team-card">KHALIFA<br>Mohamed Khalifa</div>
+                        <div class="team-card">BASSIS<br>Kenza</div>
+                        <div class="team-card">GUNENDRAN<br>Mithulan</div>
+                        <div class="team-card">NDIAYE<br>Aïda Martine</div>
+                    </div>
+                    
                     <div class="badge">✅ Application opérationnelle</div>
-                    <br>
-                    <!-- LE BOUTON VERS LA PAGE DE STATS -->
+                    
                     <a href="/stats" class="btn-stats">📊 Voir les performances</a>
                     
                     <div class="footer">
-                        ECE - Architecture Des Système D'information Et Performance
+                        ECE - Architecture Des Systèmes D'information Et Performance
                     </div>
                 </div>
             </body>
