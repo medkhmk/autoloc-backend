@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AutoLoc - Performances</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial; background: #2c3e50; color: white; padding: 20px; }
+        h1 { text-align: center; color: #1abc9c; }
+        .container { max-width: 800px; margin: auto; background: #34495e; padding: 20px; border-radius: 10px; }
+        canvas { margin-top: 20px; }
+        .btn-back {
+            display: block;
+            width: fit-content;
+            margin: 30px auto 0;
+            padding: 12px 24px;
+            background-color: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-back:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+<h1>📊 Performances d'AutoLoc</h1>
+<div class="container">
+    <h3>Nombre de requêtes HTTP (temps réel)</h3>
+    <canvas id="requestsChart"></canvas>
+
+    <h3>Temps de réponse moyen (ms)</h3>
+    <canvas id="responseTimeChart"></canvas>
+
+    <!-- LE BOUTON RETOUR -->
+    <a href="/" class="btn-back">← Retour à l'accueil</a>
+</div>
+
+<script>
+    const ctx1 = document.getElementById('requestsChart').getContext('2d');
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: ['-5m', '-4m', '-3m', '-2m', '-1m', 'Maintenant'],
+            datasets: [{
+                label: 'Requêtes / seconde',
+                data: [12, 19, 15, 22, 18, 25],
+                borderColor: '#1abc9c',
+                backgroundColor: 'rgba(26, 188, 156, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    const ctx2 = document.getElementById('responseTimeChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: ['GET /api/public/ping', 'GET /api/hello', 'GET /api/admin/report'],
+            datasets: [{
+                label: 'Temps moyen (ms)',
+                data: [5, 12, 8],
+                backgroundColor: ['#e74c3c', '#f1c40f', '#3498db']
+            }]
+        },
+        options: { responsive: true }
+    });
+</script>
+</body>
+</html>

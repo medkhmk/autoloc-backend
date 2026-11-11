@@ -72,6 +72,22 @@ public class TestController {
                         font-size: 0.9em;
                         margin-top: 20px;
                     }
+                    /* Style du bouton */
+                    .btn-stats {
+                        display: inline-block;
+                        margin-top: 20px;
+                        padding: 12px 24px;
+                        background-color: gold;
+                        color: black;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: bold;
+                        font-size: 1.1em;
+                        transition: background-color 0.3s;
+                    }
+                    .btn-stats:hover {
+                        background-color: orange;
+                    }
                 </style>
             </head>
             <body>
@@ -86,6 +102,10 @@ public class TestController {
                         <li>NDIAYE Aïda Martine</li>
                     </ul>
                     <div class="badge">✅ Application opérationnelle</div>
+                    <br>
+                    <!-- LE BOUTON VERS LA PAGE DE STATS -->
+                    <a href="/stats" class="btn-stats">📊 Voir les performances</a>
+                    
                     <div class="footer">
                         ECE - Architecture Des Système D'information Et Performance
                     </div>
